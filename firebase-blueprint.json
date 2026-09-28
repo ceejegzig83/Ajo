@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered user of Ajo Daily Contribution",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "ORGANIZER", "MEMBER"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] },
+        "address": { "type": "string", "maxLength": 250 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "email", "phone", "role", "status", "createdAt"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Ajo/Esusu/ROSCA contribution group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 500 },
+        "organizerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizerName": { "type": "string", "maxLength": 120 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["NGN"] },
+        "frequency": { "type": "string", "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"] },
+        "startDate": { "type": "string", "maxLength": 40 },
+        "deadlineTime": { "type": "string", "maxLength": 40 },
+        "gracePeriodHours": { "type": "number" },
+        "maxMembers": { "type": "number" },
+        "payoutMethod": { "type": "string", "maxLength": 80 },
+        "accessCode": { "type": "string", "minLength": 6, "maxLength": 6, "pattern": "^[0-9]{6}$" },
+        "status": { "type": "string", "enum": ["ACTIVE", "COMPLETED", "SUSPENDED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "organizerId", "organizerName", "amount", "currency", "frequency", "accessCode", "status", "createdAt"]
+    },
+    "Contribution": {
+      "title": "Contribution",
+      "description": "Scheduled contribution obligation for a group member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "groupId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["DUE", "PAID", "PENDING", "LATE", "FAILED", "CANCELLED"] },
+        "dueDate": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "groupId", "userId", "amount", "status", "dueDate", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Payment transaction record",
+      "type": "object",
+      "properties": {
+        "transactionId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reference": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "groupId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "contributionId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["NGN"] },
+        "provider": { "type": "string", "enum": ["mock", "paystack"] },
+        "status": { "type": "string", "enum": ["INITIATED", "PENDING", "SUCCESS", "FAILED", "CANCELLED", "REFUNDED"] },
+        "paymentMethod": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["transactionId", "reference", "userId", "groupId", "contributionId", "amount", "currency", "provider", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles and RBAC role assignments"
+    },
+    "/groups/{groupId}": {
+      "schema": { "$ref": "#/entities/Group" },
+      "description": "Ajo contribution groups"
+    },
+    "/contributions/{contributionId}": {
+      "schema": { "$ref": "#/entities/Contribution" },
+      "description": "Contribution schedule obligations"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Payment transaction records"
+    }
+  }
+}

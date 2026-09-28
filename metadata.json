@@ -1,0 +1,6 @@
+{
+  "name": "Ajo Daily Contribution",
+  "description": "A digital savings and Ajo/Esusu/ROSCA contribution management platform for creating groups, collecting payments, tracking payouts, sending automated reminders, and generating receipts across Member, Organizer, and Super Admin dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,184 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'ceejegzig83@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Blueprint: User
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'phone', 'role', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'fullName', 'email', 'phone', 'role', 'status', 'address', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 30 &&
+        data.role is string && data.role in ['ORGANIZER', 'MEMBER', 'SUPER_ADMIN'] &&
+        data.status is string && data.status in ['ACTIVE', 'SUSPENDED'] &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 250)) &&
+        data.createdAt == request.time;
+    }
+
+    function isValidUserUpdate(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 30 &&
+        data.role is string && data.role in ['ORGANIZER', 'MEMBER', 'SUPER_ADMIN'] &&
+        data.status is string && data.status in ['ACTIVE', 'SUSPENDED'] &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 250)) &&
+        data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: Group
+    function isValidGroup(data) {
+      return data.keys().hasAll(['id', 'name', 'organizerId', 'organizerName', 'amount', 'currency', 'frequency', 'accessCode', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'name', 'description', 'organizerId', 'organizerName', 'amount', 'currency', 'frequency', 'startDate', 'deadlineTime', 'gracePeriodHours', 'maxMembers', 'payoutMethod', 'accessCode', 'status', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.name is string && data.name.size() >= 3 && data.name.size() <= 120 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        data.organizerId is string && data.organizerId.size() <= 128 && data.organizerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.organizerId == request.auth.uid &&
+        data.organizerName is string && data.organizerName.size() >= 2 && data.organizerName.size() <= 120 &&
+        data.amount is number && data.amount > 0 &&
+        data.currency == 'NGN' &&
+        data.frequency is string && data.frequency in ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'] &&
+        data.accessCode is string && data.accessCode.size() == 6 && data.accessCode.matches('^[0-9]{6}$') &&
+        data.status is string && data.status in ['ACTIVE', 'COMPLETED', 'SUSPENDED'] &&
+        data.createdAt == request.time;
+    }
+
+    // Validation Blueprint: Contribution
+    function isValidContribution(data) {
+      return data.keys().hasAll(['id', 'groupId', 'userId', 'amount', 'status', 'dueDate', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'groupId', 'userId', 'amount', 'status', 'dueDate', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.groupId is string && data.groupId.size() <= 128 && data.groupId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId is string && data.userId.size() <= 128 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId == request.auth.uid &&
+        data.amount is number && data.amount > 0 &&
+        data.status is string && data.status in ['DUE', 'PAID', 'PENDING', 'LATE', 'FAILED', 'CANCELLED'] &&
+        data.dueDate is string && data.dueDate.size() <= 40 &&
+        data.createdAt == request.time;
+    }
+
+    // Validation Blueprint: Transaction
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['transactionId', 'reference', 'userId', 'groupId', 'contributionId', 'amount', 'currency', 'provider', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['transactionId', 'reference', 'userId', 'groupId', 'contributionId', 'amount', 'currency', 'provider', 'status', 'paymentMethod', 'createdAt', 'updatedAt']) &&
+        data.transactionId is string && data.transactionId.size() <= 128 && data.transactionId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.reference is string && data.reference.size() <= 128 && data.reference.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId is string && data.userId.size() <= 128 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId == request.auth.uid &&
+        data.groupId is string && data.groupId.size() <= 128 && data.groupId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.contributionId is string && data.contributionId.size() <= 128 && data.contributionId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.amount is number && data.amount > 0 &&
+        data.currency == 'NGN' &&
+        data.provider is string && data.provider in ['mock', 'paystack'] &&
+        data.status is string && data.status in ['INITIATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'REFUNDED'] &&
+        data.createdAt == request.time;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isVerified() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isVerified() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isVerified() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(userId) && request.auth.uid == userId &&
+        isValidUser(incoming()) && (incoming().role in ['MEMBER', 'ORGANIZER'] || isAdmin());
+      allow update: if isVerified() && isValidId(userId) && isValidUserUpdate(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt && (
+          isAdmin() || (
+            request.auth.uid == userId &&
+            existing().status == 'ACTIVE' &&
+            incoming().role == existing().role &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'address', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /groups/{groupId} {
+      allow get: if isVerified() && isValidId(groupId) && (existing().organizerId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.organizerId == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(groupId) && isValidGroup(incoming()) &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow update: if isVerified() && isValidId(groupId) && isValidGroup(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().organizerId == existing().organizerId && (
+          isAdmin() || (
+            existing().organizerId == request.auth.uid &&
+            existing().status != 'COMPLETED' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'status', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(groupId);
+    }
+
+    match /contributions/{contributionId} {
+      allow get: if isVerified() && isValidId(contributionId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(contributionId) && isValidContribution(incoming()) &&
+        exists(/databases/$(database)/documents/groups/$(incoming().groupId));
+      allow update: if isVerified() && isValidId(contributionId) && isValidContribution(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().userId == existing().userId &&
+        incoming().groupId == existing().groupId && (
+          isAdmin() || (
+            existing().userId == request.auth.uid &&
+            existing().status != 'PAID' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(contributionId);
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isVerified() && isValidId(transactionId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(transactionId) && isValidTransaction(incoming()) &&
+        exists(/databases/$(database)/documents/contributions/$(incoming().contributionId));
+      allow update: if isVerified() && isValidId(transactionId) && isValidTransaction(incoming()) &&
+        incoming().transactionId == existing().transactionId &&
+        incoming().userId == existing().userId && (
+          isAdmin() || (
+            existing().userId == request.auth.uid &&
+            existing().status != 'SUCCESS' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(transactionId);
+    }
+  }
+}
