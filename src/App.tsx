@@ -71,16 +71,29 @@ export default function App() {
     null
   );
 
+  const checkIsAdminUrl = () => {
+    const hash = (window.location.hash || '').toLowerCase();
+    const path = (window.location.pathname || '').toLowerCase();
+    const href = (window.location.href || '').toLowerCase();
+    return (
+      hash === '#amind' ||
+      hash === '#/amind' ||
+      hash.includes('amind') ||
+      hash === '#admin' ||
+      hash === '#/admin' ||
+      path.includes('/amind') ||
+      path === '/admin/login' ||
+      path === '/admin/dashboard' ||
+      href.includes('/#amind')
+    );
+  };
+
   const [screen, setScreen] = useState<AppScreen>(() => {
-    const path = window.location.pathname;
     const uid = getStoredUserId();
     const initial = loadAjoState();
     const found = uid ? initial.users.find((u) => u.id === uid) || null : null;
 
-    if (path === '/admin/login') {
-      return 'ADMIN_LOGIN';
-    }
-    if (path === '/admin/dashboard') {
+    if (checkIsAdminUrl()) {
       return isAuthorizedSuperAdmin(found) ? 'ADMIN_DASHBOARD' : 'ADMIN_LOGIN';
     }
     if (!found) return 'HOME';
@@ -106,7 +119,9 @@ export default function App() {
 
   const updateUrlPath = (nextPath: string) => {
     try {
-      if (window.location.pathname !== nextPath) {
+      if (nextPath.startsWith('/#') || nextPath.startsWith('#')) {
+        window.location.hash = nextPath.replace(/^\/?#/, '');
+      } else {
         window.history.pushState({}, '', nextPath);
       }
     } catch {
@@ -114,25 +129,40 @@ export default function App() {
     }
   };
 
+  // Listen for URL hash (/ #amind) or history changes so adding /#amind opens Admin portal
+  useEffect(() => {
+    const handleLocationChange = () => {
+      if (checkIsAdminUrl()) {
+        setScreen(
+          isAuthorizedSuperAdmin(currentUser) ? 'ADMIN_DASHBOARD' : 'ADMIN_LOGIN'
+        );
+      }
+    };
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, [currentUser]);
+
   const openAdminRoute = (target: '/admin/login' | '/admin/dashboard') => {
     if (target === '/admin/dashboard') {
       if (!isAuthorizedSuperAdmin(currentUser)) {
         setAdminAccessDeniedMsg(
-          currentUser
-            ? `Access Denied: "${currentUser.fullName}" (${currentUser.role}) is not authorized for /admin/dashboard. Redirected to /admin/login.`
-            : 'Authentication required: Please sign in as SUPER_ADMIN at /admin/login.'
+          'Authentication required: Please sign in with your Super Admin credentials.'
         );
-        updateUrlPath('/admin/login');
+        updateUrlPath('/#amind');
         setScreen('ADMIN_LOGIN');
         return;
       }
       setAdminAccessDeniedMsg(null);
-      updateUrlPath('/admin/dashboard');
+      updateUrlPath('/#amind');
       setScreen('ADMIN_DASHBOARD');
       return;
     }
     setAdminAccessDeniedMsg(null);
-    updateUrlPath('/admin/login');
+    updateUrlPath('/#amind');
     setScreen('ADMIN_LOGIN');
   };
 
@@ -145,7 +175,7 @@ export default function App() {
 
   const navigateToDashboard = (user: User) => {
     if (user.role === 'SUPER_ADMIN') {
-      updateUrlPath('/admin/dashboard');
+      updateUrlPath('/#amind');
       setScreen('ADMIN_DASHBOARD');
     } else if (user.role === 'ORGANIZER') {
       updateUrlPath('/');
@@ -178,7 +208,7 @@ export default function App() {
         createAuditEntry(
           'Admin logged in',
           adminUser,
-          `Super Admin ${adminUser.fullName} signed in via /admin/login.`
+          `Super Admin ${adminUser.fullName} signed in via /#amind.`
         ),
         ...prev.auditLogs,
       ],
@@ -186,7 +216,7 @@ export default function App() {
     setCurrentUserId(adminUser.id);
     setStoredUserId(adminUser.id);
     setAdminAccessDeniedMsg(null);
-    updateUrlPath('/admin/dashboard');
+    updateUrlPath('/#amind');
     setScreen('ADMIN_DASHBOARD');
     notify(`Authenticated as Super Admin (${adminUser.fullName}).`, 'success');
   };
@@ -258,133 +288,152 @@ export default function App() {
   // ============================================================================
   // SCREEN 1: HOME / WELCOME
   // ============================================================================
-  const HomeView = () => (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-14">
-      {/* Hero Section */}
-      <section className="bg-emerald-950 text-white rounded-3xl p-8 sm:p-12 border border-emerald-900 shadow-xl">
-        <div className="max-w-2xl space-y-5">
-          <p className="text-xs font-mono uppercase tracking-widest text-emerald-300">
-            Nigerian Digital Savings &amp; Thrift Platform · Version 1 MVP
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-balance">
-            AJO WOMAN DAILY CONTRIBUTION
-          </h1>
-          <p className="text-base sm:text-lg text-emerald-100 leading-relaxed">
-            Simple, transparent and organized group contributions.
-          </p>
+  const HomeView = () => {
+    const ps = state.platformSettings;
+    const activeFeatures = (ps.websiteFeatures || []).filter((f) => f.enabled);
+    const activeCustomSections = (ps.customSections || []).filter(
+      (s) => s.enabled
+    );
 
-          <div className="pt-3 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setScreen('LOGIN')}
-              className="min-h-[46px] px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors whitespace-nowrap"
-            >
-              LOGIN
-            </button>
-            <button
-              type="button"
-              onClick={() => setScreen('REGISTER')}
-              className="min-h-[46px] px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-sm transition-colors whitespace-nowrap"
-            >
-              CREATE ACCOUNT
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 3 Simple Feature Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-2">
-          <p className="text-xs font-mono text-emerald-700 font-semibold">01. GROUPS</p>
-          <h2 className="text-lg font-semibold text-slate-900">Track Contributions</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Create daily, weekly, or monthly Ajo contribution groups with a unique
-            6-digit Group Access Code and monitor every member&apos;s status in real time.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-2">
-          <p className="text-xs font-mono text-emerald-700 font-semibold">02. OBLIGATIONS</p>
-          <h2 className="text-lg font-semibold text-slate-900">Never Miss a Payment</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            See your active contribution amount, next due date, and current status
-            clearly on your personal dashboard.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-2">
-          <p className="text-xs font-mono text-emerald-700 font-semibold">03. TRANSPARENCY</p>
-          <h2 className="text-lg font-semibold text-slate-900">View Payment History</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Simulate test payments safely without real money and track every
-            reference number (`AJO-TEST-000001`) across all group cycles.
-          </p>
-        </div>
-      </section>
-
-      {/* Instant Demo Testing Bar */}
-      <section className="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">
-              Instant Demo Accounts (Pre-seeded for Immediate Testing)
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Demo Group: <strong>Market Women Daily Ajo</strong> · Contribution:{' '}
-              <span className="font-mono tabular-nums">₦5,000</span> Daily · Access Code:{' '}
-              <span className="font-mono font-semibold text-slate-800 tabular-nums">
-                583921
-              </span>
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-14">
+        {/* Hero Section */}
+        <section className="bg-emerald-950 text-white rounded-3xl p-8 sm:p-12 border border-emerald-900 shadow-xl">
+          <div className="max-w-2xl space-y-5">
+            <p className="text-xs font-mono uppercase tracking-widest text-emerald-300">
+              {ps.heroSubtitle || 'Nigerian Digital Savings & Thrift Platform'}
             </p>
-          </div>
-        </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-balance">
+              {ps.platformName || 'AJO WOMAN DAILY CONTRIBUTION'}
+            </h1>
+            <p className="text-base sm:text-lg text-emerald-100 leading-relaxed">
+              {ps.heroTagline ||
+                'Simple, transparent and organized group contributions.'}
+            </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {state.users
-            .filter((u) => u.role !== 'SUPER_ADMIN')
-            .slice(0, 3)
-            .map((u) => (
+            <div className="pt-3 flex flex-wrap items-center gap-3">
               <button
-                key={u.id}
                 type="button"
-                onClick={() => handleLoginUser(u)}
-                className="min-h-[48px] p-3.5 rounded-xl border border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/40 text-left transition-colors flex items-center justify-between"
+                onClick={() => setScreen('LOGIN')}
+                className="min-h-[46px] px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-colors whitespace-nowrap"
               >
-                <div className="truncate pr-2">
-                  <p className="text-xs font-semibold text-slate-900 truncate">
-                    {u.fullName}
-                  </p>
-                  <p className="text-[11px] text-slate-500 truncate">
-                    {u.role} · {u.email}
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-emerald-700 shrink-0">
-                  Sign In →
-                </span>
+                {ps.primaryCtaText || 'LOGIN'}
               </button>
-            ))}
-
-          <button
-            type="button"
-            onClick={() => openAdminRoute('/admin/login')}
-            className="min-h-[48px] p-3.5 rounded-xl border border-slate-900 bg-slate-950 hover:bg-slate-900 text-white text-left transition-colors flex items-center justify-between"
-          >
-            <div className="truncate pr-2">
-              <p className="text-xs font-semibold text-emerald-400 truncate">
-                Super Admin Portal
-              </p>
-              <p className="text-[11px] font-mono text-slate-400 truncate">
-                /admin/login
-              </p>
+              {ps.allowSelfRegistration !== false && (
+                <button
+                  type="button"
+                  onClick={() => setScreen('REGISTER')}
+                  className="min-h-[46px] px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-sm transition-colors whitespace-nowrap"
+                >
+                  {ps.secondaryCtaText || 'CREATE ACCOUNT'}
+                </button>
+              )}
             </div>
-            <span className="text-xs font-semibold text-white shrink-0">
-              Admin →
-            </span>
-          </button>
-        </div>
-      </section>
-    </div>
-  );
+          </div>
+        </section>
+
+        {/* Dynamic Website Feature Cards (Editable & Expandable by Admin) */}
+        {activeFeatures.length > 0 && (
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {activeFeatures.map((feat) => (
+              <div
+                key={feat.id}
+                className="bg-white rounded-2xl p-6 border border-slate-200 space-y-2"
+              >
+                <p className="text-xs font-mono text-emerald-700 font-semibold">
+                  {feat.badge}
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  {feat.title}
+                </h2>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {feat.description}
+                </p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Dynamic Custom Website Sections Added by Admin */}
+        {activeCustomSections.length > 0 && (
+          <section className="space-y-6">
+            {activeCustomSections.map((sec) => (
+              <div
+                key={sec.id}
+                className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 space-y-3"
+              >
+                <p className="text-xs font-mono uppercase tracking-wider text-emerald-700 font-semibold">
+                  {sec.subtitle}
+                </p>
+                <h2 className="text-xl font-bold text-slate-900">{sec.title}</h2>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                  {sec.content}
+                </p>
+                {sec.ctaLabel && sec.ctaTargetScreen && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setScreen(sec.ctaTargetScreen!)}
+                      className="min-h-[42px] px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
+                    >
+                      {sec.ctaLabel} →
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Instant Demo Testing Bar (Member & Organizer only; Admin is strictly hidden) */}
+        {ps.showPublicDemoAccounts !== false && (
+          <section className="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Instant Demo Accounts (Pre-seeded for Immediate Testing)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Demo Group: <strong>Market Women Daily Ajo</strong> · Contribution:{' '}
+                  <span className="font-mono tabular-nums">₦5,000</span> Daily · Access
+                  Code:{' '}
+                  <span className="font-mono font-semibold text-slate-800 tabular-nums">
+                    583921
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {state.users
+                .filter((u) => u.role !== 'SUPER_ADMIN')
+                .slice(0, 3)
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleLoginUser(u)}
+                    className="min-h-[48px] p-3.5 rounded-xl border border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/40 text-left transition-colors flex items-center justify-between"
+                  >
+                    <div className="truncate pr-2">
+                      <p className="text-xs font-semibold text-slate-900 truncate">
+                        {u.fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {u.role} · {u.email}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-700 shrink-0">
+                      Sign In →
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  };
 
   // ============================================================================
   // SCREEN 2: LOGIN
@@ -406,9 +455,7 @@ export default function App() {
         return;
       }
       if (found.role === 'SUPER_ADMIN') {
-        setError(
-          'Super Admin accounts must sign in through the separate /admin/login portal.'
-        );
+        handleAdminLoginSuccess(found);
         return;
       }
       handleLoginUser(found);
@@ -471,28 +518,31 @@ export default function App() {
             </button>
           </form>
 
-          {/* Quick Demo Fillers */}
+          {/* Quick Demo Fillers (Member & Organizer only; Admin email is strictly hidden) */}
           <div className="pt-4 border-t border-slate-100 space-y-2">
             <p className="text-[11px] font-medium text-slate-500">
               Quick-Fill Demo Accounts (Password: <span className="font-mono">password123</span>):
             </p>
             <div className="grid grid-cols-1 gap-2">
-              {state.users.slice(0, 3).map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    setEmail(u.email);
-                    setPassword(u.password);
-                  }}
-                  className="px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left text-xs flex items-center justify-between"
-                >
-                  <span className="font-medium text-slate-800">
-                    {u.fullName} ({u.role})
-                  </span>
-                  <span className="font-mono text-[11px] text-slate-500">{u.email}</span>
-                </button>
-              ))}
+              {state.users
+                .filter((u) => u.role !== 'SUPER_ADMIN')
+                .slice(0, 3)
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setEmail(u.email);
+                      setPassword(u.password);
+                    }}
+                    className="px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left text-xs flex items-center justify-between"
+                  >
+                    <span className="font-medium text-slate-800">
+                      {u.fullName} ({u.role})
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">{u.email}</span>
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -2464,6 +2514,30 @@ export default function App() {
   // ============================================================================
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-20 md:pb-10">
+      {/* Super Admin Live Preview Return Bar (Only visible to authenticated Super Admin) */}
+      {isAuthorizedSuperAdmin(currentUser) && (
+        <div className="bg-slate-950 text-white px-4 sm:px-6 py-2 text-xs flex items-center justify-between border-b border-slate-800">
+          <span className="font-mono text-emerald-400">
+            SUPER ADMIN PREVIEW MODE
+          </span>
+          <button
+            type="button"
+            onClick={() => openAdminRoute('/admin/dashboard')}
+            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs"
+          >
+            Return to Admin Dashboard (/#amind) →
+          </button>
+        </div>
+      )}
+
+      {/* Global Website Announcement Banner (Controlled by Admin) */}
+      {state.platformSettings.announcementBannerActive &&
+        state.platformSettings.announcementBannerText && (
+          <div className="bg-emerald-900 text-emerald-50 px-4 sm:px-6 py-2.5 text-xs font-medium text-center border-b border-emerald-800">
+            {state.platformSettings.announcementBannerText}
+          </div>
+        )}
+
       {/* 3-Zone Top Bar */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Zone 1: Single text element Brand wordmark */}
@@ -2474,10 +2548,10 @@ export default function App() {
           }
           className="text-base font-bold tracking-tight text-emerald-950 whitespace-nowrap"
         >
-          AJO WOMAN DAILY CONTRIBUTION
+          {state.platformSettings.platformName || 'AJO WOMAN DAILY CONTRIBUTION'}
         </button>
 
-        {/* Zone 2: Clean text navigation links */}
+        {/* Zone 2: Clean text navigation links (Admin dashboard is hidden from public) */}
         {currentUser ? (
           <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-slate-600">
             <button
@@ -2487,30 +2561,36 @@ export default function App() {
             >
               Dashboard
             </button>
-            <button
-              type="button"
-              onClick={() => setScreen('MY_CONTRIBUTIONS')}
-              className="hover:text-slate-900 transition-colors whitespace-nowrap"
-            >
-              My Contributions
-            </button>
-            {currentUser.role === 'ORGANIZER' ? (
+            {state.platformSettings.enableScheduleFeature !== false && (
               <button
                 type="button"
-                onClick={() => setScreen('CREATE_GROUP')}
+                onClick={() => setScreen('MY_CONTRIBUTIONS')}
                 className="hover:text-slate-900 transition-colors whitespace-nowrap"
               >
-                Create Group
+                My Contributions
               </button>
-            ) : (
-              <>
+            )}
+            {currentUser.role === 'ORGANIZER' ? (
+              state.platformSettings.allowGroupCreation !== false && (
                 <button
                   type="button"
-                  onClick={() => setScreen('JOIN_GROUP')}
+                  onClick={() => setScreen('CREATE_GROUP')}
                   className="hover:text-slate-900 transition-colors whitespace-nowrap"
                 >
-                  Join Group
+                  Create Group
                 </button>
+              )
+            ) : (
+              <>
+                {state.platformSettings.allowGroupJoining !== false && (
+                  <button
+                    type="button"
+                    onClick={() => setScreen('JOIN_GROUP')}
+                    className="hover:text-slate-900 transition-colors whitespace-nowrap"
+                  >
+                    Join Group
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setScreen('MAKE_PAYMENT')}
@@ -2520,34 +2600,30 @@ export default function App() {
                 </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={() => setScreen('REMINDERS')}
-              className="hover:text-slate-900 transition-colors whitespace-nowrap"
-            >
-              Reminders
-            </button>
-            <button
-              type="button"
-              onClick={() => setScreen('PAYMENT_HISTORY')}
-              className="hover:text-slate-900 transition-colors whitespace-nowrap"
-            >
-              Payment History
-            </button>
+            {state.platformSettings.enableRemindersFeature !== false && (
+              <button
+                type="button"
+                onClick={() => setScreen('REMINDERS')}
+                className="hover:text-slate-900 transition-colors whitespace-nowrap"
+              >
+                Reminders
+              </button>
+            )}
+            {state.platformSettings.enablePaymentHistoryFeature !== false && (
+              <button
+                type="button"
+                onClick={() => setScreen('PAYMENT_HISTORY')}
+                className="hover:text-slate-900 transition-colors whitespace-nowrap"
+              >
+                Payment History
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setScreen('PROFILE')}
               className="hover:text-slate-900 transition-colors whitespace-nowrap"
             >
               Profile
-            </button>
-            <button
-              type="button"
-              onClick={() => openAdminRoute('/admin/dashboard')}
-              className="font-mono text-[11px] text-slate-400 hover:text-slate-900 transition-colors whitespace-nowrap"
-              title="Test /admin/dashboard route guard"
-            >
-              /admin/dashboard
             </button>
           </nav>
         ) : (
@@ -2566,20 +2642,15 @@ export default function App() {
             >
               Login
             </button>
-            <button
-              type="button"
-              onClick={() => setScreen('REGISTER')}
-              className="hover:text-slate-900 transition-colors whitespace-nowrap"
-            >
-              Register
-            </button>
-            <button
-              type="button"
-              onClick={() => openAdminRoute('/admin/login')}
-              className="font-mono text-[11px] text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap"
-            >
-              Admin Login
-            </button>
+            {state.platformSettings.allowSelfRegistration !== false && (
+              <button
+                type="button"
+                onClick={() => setScreen('REGISTER')}
+                className="hover:text-slate-900 transition-colors whitespace-nowrap"
+              >
+                Register
+              </button>
+            )}
           </nav>
         )}
 
@@ -2673,6 +2744,13 @@ export default function App() {
         {screen === 'GROUP_DETAILS' && <GroupDetailsView />}
         {screen === 'PROFILE' && <ProfileView />}
       </main>
+
+      {/* Website Footer (Editable by Admin) */}
+      {state.platformSettings.footerText && (
+        <footer className="max-w-5xl mx-auto w-full px-4 sm:px-6 pt-10 pb-4 text-center text-xs text-slate-400">
+          {state.platformSettings.footerText}
+        </footer>
+      )}
 
       {/* Mobile Bottom Navigation Bar */}
       {currentUser && (

@@ -340,6 +340,46 @@ export function getDefaultPlatformSettings(): PlatformSettings {
     paymentProvider: 'MOCK',
     testMode: true,
     requireAdminSessionAuth: true,
+    heroSubtitle: 'Nigerian Digital Savings & Thrift Platform',
+    heroTagline: 'Simple, transparent and organized group contributions.',
+    primaryCtaText: 'LOGIN',
+    secondaryCtaText: 'CREATE ACCOUNT',
+    announcementBannerText: '',
+    announcementBannerActive: false,
+    showPublicDemoAccounts: true,
+    allowGroupCreation: true,
+    allowGroupJoining: true,
+    enableRemindersFeature: true,
+    enableScheduleFeature: true,
+    enablePaymentHistoryFeature: true,
+    footerText: '© 2026 AJO WOMAN DAILY CONTRIBUTION. All rights reserved.',
+    websiteFeatures: [
+      {
+        id: 'feat-1',
+        badge: '01. GROUPS',
+        title: 'Track Contributions',
+        description:
+          "Create daily, weekly, or monthly Ajo contribution groups with a unique 6-digit Group Access Code and monitor every member's status in real time.",
+        enabled: true,
+      },
+      {
+        id: 'feat-2',
+        badge: '02. OBLIGATIONS',
+        title: 'Never Miss a Payment',
+        description:
+          'See your active contribution amount, next due date, and current status clearly on your personal dashboard.',
+        enabled: true,
+      },
+      {
+        id: 'feat-3',
+        badge: '03. TRANSPARENCY',
+        title: 'View Payment History',
+        description:
+          'Simulate test payments safely without real money and track every reference number (AJO-TEST-000001) across all group cycles.',
+        enabled: true,
+      },
+    ],
+    customSections: [],
   };
 }
 
@@ -392,10 +432,10 @@ export function getInitialDemoState(): AjoState {
     },
     {
       id: 'usr-admin-1',
-      fullName: 'Chukwuma Okafor',
+      fullName: 'Super Administrator',
       phone: '08090001100',
-      email: 'admin@ajodaily.ng',
-      password: 'admin123',
+      email: 'ceejegzig83@gmail.com',
+      password: 'ceejegzig83',
       role: 'SUPER_ADMIN',
       status: 'ACTIVE',
       lastLoginAt: `${todayYmd}T09:00:00.000Z`,
@@ -723,12 +763,23 @@ export function loadAjoState(): AjoState {
     const rawSeq = localStorage.getItem(STORAGE_KEYS.REF_SEQ);
 
     if (rawUsers && rawGroups && rawMembers && rawContributions && rawTransactions) {
-      let users: User[] = JSON.parse(rawUsers).map((u: User) => ({
-        ...u,
-        status: u.status || 'ACTIVE',
-      }));
+      let users: User[] = JSON.parse(rawUsers).map((u: User) => {
+        if (u.role === 'SUPER_ADMIN' || u.id === 'usr-admin-1') {
+          return {
+            ...u,
+            email: 'ceejegzig83@gmail.com',
+            password: 'ceejegzig83',
+            role: 'SUPER_ADMIN',
+            status: 'ACTIVE',
+          };
+        }
+        return {
+          ...u,
+          status: u.status || 'ACTIVE',
+        };
+      });
 
-      // Ensure Demo Super Admin account exists in users list
+      // Ensure Super Admin account exists in users list with required credentials
       if (!users.some((u) => u.role === 'SUPER_ADMIN')) {
         const adminDemo = demo.users.find((u) => u.role === 'SUPER_ADMIN')!;
         users = [...users, adminDemo];
@@ -776,11 +827,20 @@ export function loadAjoState(): AjoState {
         ? JSON.parse(rawPlatformSettings)
         : demo.platformSettings;
       const platformSettings: PlatformSettings = {
+        ...demo.platformSettings,
         ...rawParsedPlatformSettings,
         platformName:
           rawParsedPlatformSettings.platformName === 'AJO DAILY CONTRIBUTION'
             ? 'AJO WOMAN DAILY CONTRIBUTION'
             : rawParsedPlatformSettings.platformName || 'AJO WOMAN DAILY CONTRIBUTION',
+        websiteFeatures:
+          rawParsedPlatformSettings.websiteFeatures &&
+          rawParsedPlatformSettings.websiteFeatures.length > 0
+            ? rawParsedPlatformSettings.websiteFeatures
+            : demo.platformSettings.websiteFeatures,
+        customSections:
+          rawParsedPlatformSettings.customSections ||
+          demo.platformSettings.customSections,
       };
 
       const loaded: AjoState = {

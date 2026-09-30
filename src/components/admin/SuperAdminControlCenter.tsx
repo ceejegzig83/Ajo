@@ -22,6 +22,7 @@ import {
   Edit3,
   Ban,
   CheckCircle2,
+  Globe,
 } from 'lucide-react';
 import {
   User,
@@ -47,9 +48,11 @@ import {
   AdminGroupDetailsModal,
   AdminContributionDetailsModal,
 } from './AdminDetailModals';
+import { AdminWebsiteEditor } from './AdminWebsiteEditor';
 
 export type AdminTab =
   | 'DASHBOARD'
+  | 'WEBSITE_EDITOR'
   | 'USERS'
   | 'ORGANIZERS'
   | 'MEMBERS'
@@ -237,6 +240,11 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
 
   const sidebarItems: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
     { id: 'DASHBOARD', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    {
+      id: 'WEBSITE_EDITOR',
+      label: 'Website & Features',
+      icon: <Globe className="w-4 h-4" />,
+    },
     { id: 'USERS', label: 'Users', icon: <Users className="w-4 h-4" /> },
     { id: 'ORGANIZERS', label: 'Organizers', icon: <UserCog className="w-4 h-4" /> },
     { id: 'MEMBERS', label: 'Members', icon: <UserCheck className="w-4 h-4" /> },
@@ -570,6 +578,13 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                   Quick Actions
                 </span>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('WEBSITE_EDITOR')}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
+                  >
+                    EDIT WEBSITE &amp; ADD FEATURES
+                  </button>
                   <button
                     type="button"
                     onClick={() => setActiveTab('USERS')}
@@ -1856,6 +1871,19 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
               setState={setState}
               notify={notify}
               logAdminAction={logAdminAction}
+            />
+          )}
+
+          {/* ==============================================================
+              TAB: WEBSITE & FEATURE BUILDER (CMS)
+             ============================================================== */}
+          {activeTab === 'WEBSITE_EDITOR' && (
+            <AdminWebsiteEditor
+              adminUser={adminUser}
+              state={state}
+              setState={setState}
+              notify={notify}
+              onPreviewWebsite={onSwitchToPublicApp}
             />
           )}
 

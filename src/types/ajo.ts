@@ -162,6 +162,24 @@ export interface AdminNotificationRecord {
   isRead: boolean;
 }
 
+export interface WebsiteFeatureCard {
+  id: string;
+  badge: string;
+  title: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface WebsiteCustomSection {
+  id: string;
+  title: string;
+  subtitle: string;
+  content: string;
+  ctaLabel?: string;
+  ctaTargetScreen?: 'LOGIN' | 'REGISTER' | 'JOIN_GROUP' | 'MAKE_PAYMENT';
+  enabled: boolean;
+}
+
 export interface PlatformSettings {
   platformName: string;
   supportEmail: string;
@@ -173,6 +191,22 @@ export interface PlatformSettings {
   paymentProvider: 'MOCK' | 'PAYSTACK';
   testMode: boolean;
   requireAdminSessionAuth: boolean;
+  // Website & Feature Builder (CMS) fields
+  heroSubtitle?: string;
+  heroTagline?: string;
+  primaryCtaText?: string;
+  secondaryCtaText?: string;
+  announcementBannerText?: string;
+  announcementBannerActive?: boolean;
+  showPublicDemoAccounts?: boolean;
+  allowGroupCreation?: boolean;
+  allowGroupJoining?: boolean;
+  enableRemindersFeature?: boolean;
+  enableScheduleFeature?: boolean;
+  enablePaymentHistoryFeature?: boolean;
+  footerText?: string;
+  websiteFeatures?: WebsiteFeatureCard[];
+  customSections?: WebsiteCustomSection[];
 }
 
 export type AppScreen =
