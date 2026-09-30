@@ -267,7 +267,7 @@ export default function App() {
             Nigerian Digital Savings &amp; Thrift Platform · Version 1 MVP
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-balance">
-            AJO DAILY CONTRIBUTION
+            AJO WOMAN DAILY CONTRIBUTION
           </h1>
           <p className="text-base sm:text-lg text-emerald-100 leading-relaxed">
             Simple, transparent and organized group contributions.
@@ -2474,7 +2474,7 @@ export default function App() {
           }
           className="text-base font-bold tracking-tight text-emerald-950 whitespace-nowrap"
         >
-          Ajo Daily Contribution
+          AJO WOMAN DAILY CONTRIBUTION
         </button>
 
         {/* Zone 2: Clean text navigation links */}

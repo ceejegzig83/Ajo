@@ -110,7 +110,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
               <span>/admin/login · Restricted Portal</span>
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">
-              AJO DAILY CONTRIBUTION
+              AJO WOMAN DAILY CONTRIBUTION
             </h1>
             <p className="text-xs font-mono font-semibold text-emerald-400">
               SUPER ADMIN CONTROL CENTER

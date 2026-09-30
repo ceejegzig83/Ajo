@@ -330,7 +330,7 @@ export function createAuditEntry(
 
 export function getDefaultPlatformSettings(): PlatformSettings {
   return {
-    platformName: 'AJO DAILY CONTRIBUTION',
+    platformName: 'AJO WOMAN DAILY CONTRIBUTION',
     supportEmail: 'support@ajodaily.ng',
     defaultCurrency: 'NGN (₦)',
     gracePeriodHours: 24,
@@ -772,9 +772,16 @@ export function loadAjoState(): AjoState {
       const adminNotifications: AdminNotificationRecord[] = rawAdminNotifs
         ? JSON.parse(rawAdminNotifs)
         : demo.adminNotifications;
-      const platformSettings: PlatformSettings = rawPlatformSettings
+      const rawParsedPlatformSettings: PlatformSettings = rawPlatformSettings
         ? JSON.parse(rawPlatformSettings)
         : demo.platformSettings;
+      const platformSettings: PlatformSettings = {
+        ...rawParsedPlatformSettings,
+        platformName:
+          rawParsedPlatformSettings.platformName === 'AJO DAILY CONTRIBUTION'
+            ? 'AJO WOMAN DAILY CONTRIBUTION'
+            : rawParsedPlatformSettings.platformName || 'AJO WOMAN DAILY CONTRIBUTION',
+      };
 
       const loaded: AjoState = {
         users,

@@ -273,7 +273,7 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
             SUPER ADMIN
           </p>
           <h1 className="text-base font-bold text-white tracking-tight mt-0.5">
-            AJO DAILY CONTRIBUTION
+            AJO WOMAN DAILY CONTRIBUTION
           </h1>
         </div>
 
@@ -327,7 +327,9 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                 <p className="text-[10px] font-mono uppercase text-emerald-400">
                   SUPER ADMIN
                 </p>
-                <p className="text-sm font-bold text-white">AJO DAILY CONTRIBUTION</p>
+                <p className="text-sm font-bold text-white">
+                  AJO WOMAN DAILY CONTRIBUTION
+                </p>
               </div>
               <button
                 type="button"
@@ -387,7 +389,7 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                 SUPER ADMIN
               </p>
               <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                AJO DAILY CONTRIBUTION
+                AJO WOMAN DAILY CONTRIBUTION
               </h2>
             </div>
           </div>
